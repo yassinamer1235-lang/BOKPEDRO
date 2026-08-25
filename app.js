@@ -2,21 +2,15 @@ import {
     initializeApp
 } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
 
-
 import {
     getAuth,
-    createUserWithEmailAndPassword,
-    updateEmail,
-    deleteUser
+    createUserWithEmailAndPassword
 } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
-
 
 import {
     getDatabase,
     ref,
-    get,
-    set,
-    remove
+    set
 } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-database.js";
 
 
@@ -59,10 +53,8 @@ const firebaseConfig = {
 const app =
     initializeApp(firebaseConfig);
 
-
 const auth =
     getAuth(app);
-
 
 const db =
     getDatabase(app);
@@ -75,29 +67,24 @@ const db =
 const usernameInput =
     document.getElementById("username");
 
-
 const passwordInput =
     document.getElementById("password");
-
 
 const subscriptionInput =
     document.getElementById("subscription");
 
-
 const subscriptionInfo =
     document.getElementById("subscriptionInfo");
 
-
 const createButton =
     document.getElementById("createAccount");
-
 
 const message =
     document.getElementById("message");
 
 
 // =====================================================
-// التأكد من العناصر
+// التحقق من العناصر
 // =====================================================
 
 if (
@@ -162,11 +149,9 @@ function updateSubscriptionInfo() {
     const type =
         subscriptionInput.value;
 
-
     const name =
         subscriptionNames[type] ||
         "يوم واحد";
-
 
     subscriptionInfo.innerHTML =
         `مدة الاشتراك: <strong>${name}</strong>`;
@@ -289,16 +274,15 @@ function generateAccountNumber() {
 
 
 // =====================================================
-// البحث عن رقم حساب متاح
+// حفظ رقم الحساب
 //
-// ملاحظة:
-// هذه الدالة تعمل بعد تسجيل المستخدم في Auth
-// لأن Rules تتطلب auth != null
+// Rules تمنع الكتابة إذا الرقم موجود.
+// لذلك نحاول رقمًا جديدًا إذا فشلت العملية.
 // =====================================================
 
-async function getAvailableAccountNumber() {
+async function reserveAccountNumber(uid) {
 
-    const maxAttempts = 30;
+    const maxAttempts = 50;
 
 
     for (
@@ -319,19 +303,33 @@ async function getAvailableAccountNumber() {
             );
 
 
-        const snapshot =
-            await get(accountRef);
+        try {
 
+            await set(
+                accountRef,
+                {
+                    uid: uid
+                }
+            );
 
-        if (!snapshot.exists()) {
 
             return accountNumber;
+
+        } catch (error) {
+
+            console.warn(
+                "محاولة رقم الحساب فشلت:",
+                accountNumber,
+                error
+            );
+
+            // تجربة رقم آخر
         }
     }
 
 
     throw new Error(
-        "لم يتم العثور على رقم حساب متاح."
+        "تعذر إنشاء رقم حساب متاح بعد عدة محاولات."
     );
 }
 
@@ -421,24 +419,19 @@ createButton.addEventListener(
         );
 
 
-        let createdUser = null;
-
-        let accountNumber = null;
-
-        let userDataSaved = false;
-
-        let accountNumberSaved = false;
-
-
         try {
 
             // =========================================
-            // وقت الاشتراك
+            // بداية الاشتراك
             // =========================================
 
             const subscriptionStart =
                 new Date();
 
+
+            // =========================================
+            // نهاية الاشتراك
+            // =========================================
 
             const subscriptionEnd =
                 calculateSubscriptionEnd(
@@ -448,28 +441,23 @@ createButton.addEventListener(
 
 
             // =========================================
-            // إنشاء بريد مؤقت
+            // إنشاء بريد داخلي مؤقت
             //
-            // نحتاج Auth أولاً حتى تسمح Rules
-            // بقراءة accountNumbers
+            // يتم استخدام UID بعد إنشاء الحساب.
             // =========================================
 
-            const temporaryId =
+            const temporaryEmail =
+                "user_" +
                 Date.now() +
                 "_" +
                 Math.random()
                     .toString(36)
-                    .substring(2, 10);
-
-
-            const temporaryEmail =
-                "temp_" +
-                temporaryId +
+                    .substring(2, 10) +
                 "@bok-pedro.firebaseapp.com";
 
 
             // =========================================
-            // إنشاء مستخدم Firebase Authentication
+            // إنشاء Firebase Authentication
             // =========================================
 
             const userCredential =
@@ -480,37 +468,25 @@ createButton.addEventListener(
                 );
 
 
-            createdUser =
+            const user =
                 userCredential.user;
 
 
             const uid =
-                createdUser.uid;
+                user.uid;
 
 
             // =========================================
-            // الآن auth موجود
-            // وبالتالي Rules تسمح بقراءة
-            // accountNumbers
+            // حجز رقم الحساب
+            //
+            // الآن auth موجود، لذلك Rules تسمح
+            // بالكتابة في accountNumbers.
             // =========================================
 
-            accountNumber =
-                await getAvailableAccountNumber();
-
-
-            // =========================================
-            // تحويل البريد المؤقت إلى بريد الحساب
-            // =========================================
-
-            const accountEmail =
-                accountNumber +
-                "@bok-pedro.firebaseapp.com";
-
-
-            await updateEmail(
-                createdUser,
-                accountEmail
-            );
+            const accountNumber =
+                await reserveAccountNumber(
+                    uid
+                );
 
 
             // =========================================
@@ -551,7 +527,7 @@ createButton.addEventListener(
 
 
             // =========================================
-            // حفظ المستخدم
+            // حفظ بيانات المستخدم
             // =========================================
 
             await set(
@@ -562,30 +538,6 @@ createButton.addEventListener(
                 ),
                 userData
             );
-
-
-            userDataSaved = true;
-
-
-            // =========================================
-            // حفظ رقم الحساب
-            // =========================================
-
-            await set(
-                ref(
-                    db,
-                    "accountNumbers/" +
-                    accountNumber
-                ),
-                {
-
-                    uid:
-                        uid
-                }
-            );
-
-
-            accountNumberSaved = true;
 
 
             // =========================================
@@ -674,65 +626,13 @@ createButton.addEventListener(
             );
 
 
-            // =========================================
-            // تنظيف البيانات إذا فشل شيء
-            // =========================================
-
-            try {
-
-                if (
-                    accountNumberSaved &&
-                    accountNumber
-                ) {
-
-                    await remove(
-                        ref(
-                            db,
-                            "accountNumbers/" +
-                            accountNumber
-                        )
-                    );
-                }
-
-
-                if (
-                    userDataSaved &&
-                    createdUser
-                ) {
-
-                    await remove(
-                        ref(
-                            db,
-                            "users/" +
-                            createdUser.uid
-                        )
-                    );
-                }
-
-
-                if (createdUser) {
-
-                    await deleteUser(
-                        createdUser
-                    );
-                }
-
-            } catch (cleanupError) {
-
-                console.error(
-                    "Cleanup Error:",
-                    cleanupError
-                );
-            }
-
-
-            // =========================================
-            // رسالة الخطأ
-            // =========================================
-
             let errorMessage =
                 "حدث خطأ أثناء إنشاء الحساب.";
 
+
+            // =========================================
+            // أخطاء Firebase Auth
+            // =========================================
 
             switch (error.code) {
 
@@ -763,7 +663,7 @@ createButton.addEventListener(
                 case "auth/invalid-email":
 
                     errorMessage =
-                        "حدث خطأ في البريد الإلكتروني.";
+                        "حدث خطأ في البريد الداخلي للحساب.";
 
                     break;
 
@@ -780,14 +680,6 @@ createButton.addEventListener(
 
                     errorMessage =
                         "مفتاح Firebase API غير صحيح.";
-
-                    break;
-
-
-                case "auth/requires-recent-login":
-
-                    errorMessage =
-                        "يرجى إعادة المحاولة.";
 
                     break;
 
@@ -871,4 +763,4 @@ function escapeHTML(text) {
             /'/g,
             "&#039;"
         );
-        }
+                        }
