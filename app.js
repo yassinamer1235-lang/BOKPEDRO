@@ -2,16 +2,21 @@ import {
     initializeApp
 } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
 
+
 import {
     getAuth,
-    createUserWithEmailAndPassword
+    createUserWithEmailAndPassword,
+    updateEmail,
+    deleteUser
 } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+
 
 import {
     getDatabase,
     ref,
     get,
-    set
+    set,
+    remove
 } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-database.js";
 
 
@@ -48,7 +53,7 @@ const firebaseConfig = {
 
 
 // =====================================================
-// Initialize Firebase
+// تشغيل Firebase
 // =====================================================
 
 const app =
@@ -92,7 +97,7 @@ const message =
 
 
 // =====================================================
-// التأكد من وجود العناصر
+// التأكد من العناصر
 // =====================================================
 
 if (
@@ -111,7 +116,7 @@ if (
 
 
 // =====================================================
-// عرض الرسالة
+// عرض الرسائل
 // =====================================================
 
 function showMessage(
@@ -149,7 +154,7 @@ const subscriptionNames = {
 
 
 // =====================================================
-// تحديث معلومات الاشتراك عند الاختيار
+// تحديث معلومات الاشتراك
 // =====================================================
 
 function updateSubscriptionInfo() {
@@ -174,15 +179,11 @@ subscriptionInput.addEventListener(
 );
 
 
-// =====================================================
-// تشغيلها أول مرة
-// =====================================================
-
 updateSubscriptionInfo();
 
 
 // =====================================================
-// حساب تاريخ انتهاء الاشتراك
+// حساب نهاية الاشتراك
 // =====================================================
 
 function calculateSubscriptionEnd(
@@ -191,7 +192,9 @@ function calculateSubscriptionEnd(
 ) {
 
     const endDate =
-        new Date(startDate.getTime());
+        new Date(
+            startDate.getTime()
+        );
 
 
     switch (subscriptionType) {
@@ -254,7 +257,7 @@ function calculateSubscriptionEnd(
 
 
 // =====================================================
-// تنسيق التاريخ للعرض
+// تنسيق التاريخ
 // =====================================================
 
 function formatDate(date) {
@@ -273,7 +276,7 @@ function formatDate(date) {
 
 
 // =====================================================
-// توليد رقم حساب من 7 أرقام
+// توليد رقم حساب 7 أرقام
 // =====================================================
 
 function generateAccountNumber() {
@@ -286,7 +289,11 @@ function generateAccountNumber() {
 
 
 // =====================================================
-// البحث عن رقم حساب غير مستخدم
+// البحث عن رقم حساب متاح
+//
+// ملاحظة:
+// هذه الدالة تعمل بعد تسجيل المستخدم في Auth
+// لأن Rules تتطلب auth != null
 // =====================================================
 
 async function getAvailableAccountNumber() {
@@ -349,9 +356,9 @@ createButton.addEventListener(
             subscriptionInput.value;
 
 
-        // ---------------------------------------------
+        // =============================================
         // التحقق من اسم المستخدم
-        // ---------------------------------------------
+        // =============================================
 
         if (username.length < 3) {
 
@@ -364,9 +371,9 @@ createButton.addEventListener(
         }
 
 
-        // ---------------------------------------------
+        // =============================================
         // التحقق من كلمة المرور
-        // ---------------------------------------------
+        // =============================================
 
         if (password.length < 6) {
 
@@ -379,9 +386,9 @@ createButton.addEventListener(
         }
 
 
-        // ---------------------------------------------
-        // التحقق من مدة الاشتراك
-        // ---------------------------------------------
+        // =============================================
+        // التحقق من الاشتراك
+        // =============================================
 
         if (
             !subscriptionNames[
@@ -398,9 +405,9 @@ createButton.addEventListener(
         }
 
 
-        // ---------------------------------------------
+        // =============================================
         // تعطيل الزر
-        // ---------------------------------------------
+        // =============================================
 
         createButton.disabled = true;
 
@@ -414,19 +421,24 @@ createButton.addEventListener(
         );
 
 
+        let createdUser = null;
+
+        let accountNumber = null;
+
+        let userDataSaved = false;
+
+        let accountNumberSaved = false;
+
+
         try {
 
             // =========================================
-            // وقت بداية الاشتراك
+            // وقت الاشتراك
             // =========================================
 
             const subscriptionStart =
                 new Date();
 
-
-            // =========================================
-            // حساب نهاية الاشتراك
-            // =========================================
 
             const subscriptionEnd =
                 calculateSubscriptionEnd(
@@ -436,20 +448,24 @@ createButton.addEventListener(
 
 
             // =========================================
-            // إنشاء رقم حساب فريد
+            // إنشاء بريد مؤقت
+            //
+            // نحتاج Auth أولاً حتى تسمح Rules
+            // بقراءة accountNumbers
             // =========================================
 
-            const accountNumber =
-                await getAvailableAccountNumber();
+            const temporaryId =
+                Date.now() +
+                "_" +
+                Math.random()
+                    .toString(36)
+                    .substring(2, 10);
 
 
-            // =========================================
-            // إنشاء بريد داخلي لـ Firebase Auth
-            // =========================================
-
-            const email =
-                accountNumber +
-                "@bok-ped.firebaseapp.com";
+            const temporaryEmail =
+                "temp_" +
+                temporaryId +
+                "@bok-pedro.firebaseapp.com";
 
 
             // =========================================
@@ -459,60 +475,96 @@ createButton.addEventListener(
             const userCredential =
                 await createUserWithEmailAndPassword(
                     auth,
-                    email,
+                    temporaryEmail,
                     password
                 );
 
 
+            createdUser =
+                userCredential.user;
+
+
             const uid =
-                userCredential.user.uid;
+                createdUser.uid;
 
 
             // =========================================
-            // حفظ بيانات المستخدم
+            // الآن auth موجود
+            // وبالتالي Rules تسمح بقراءة
+            // accountNumbers
+            // =========================================
+
+            accountNumber =
+                await getAvailableAccountNumber();
+
+
+            // =========================================
+            // تحويل البريد المؤقت إلى بريد الحساب
+            // =========================================
+
+            const accountEmail =
+                accountNumber +
+                "@bok-pedro.firebaseapp.com";
+
+
+            await updateEmail(
+                createdUser,
+                accountEmail
+            );
+
+
+            // =========================================
+            // بيانات المستخدم
+            // =========================================
+
+            const userData = {
+
+                username:
+                    username,
+
+                accountNumber:
+                    accountNumber,
+
+                uid:
+                    uid,
+
+                createdAt:
+                    Date.now(),
+
+                subscriptionType:
+                    subscriptionType,
+
+                subscriptionName:
+                    subscriptionNames[
+                        subscriptionType
+                    ],
+
+                subscriptionStart:
+                    subscriptionStart.getTime(),
+
+                subscriptionEnd:
+                    subscriptionEnd.getTime(),
+
+                active:
+                    true
+            };
+
+
+            // =========================================
+            // حفظ المستخدم
             // =========================================
 
             await set(
                 ref(
                     db,
-                    "users/" + uid
+                    "users/" +
+                    uid
                 ),
-                {
-
-                    username:
-                        username,
-
-                    accountNumber:
-                        accountNumber,
-
-                    uid:
-                        uid,
-
-                    createdAt:
-                        Date.now(),
-
-                    // ================================
-                    // بيانات الاشتراك
-                    // ================================
-
-                    subscriptionType:
-                        subscriptionType,
-
-                    subscriptionName:
-                        subscriptionNames[
-                            subscriptionType
-                        ],
-
-                    subscriptionStart:
-                        subscriptionStart.getTime(),
-
-                    subscriptionEnd:
-                        subscriptionEnd.getTime(),
-
-                    active:
-                        true
-                }
+                userData
             );
+
+
+            userDataSaved = true;
 
 
             // =========================================
@@ -531,6 +583,9 @@ createButton.addEventListener(
                         uid
                 }
             );
+
+
+            accountNumberSaved = true;
 
 
             // =========================================
@@ -619,13 +674,65 @@ createButton.addEventListener(
             );
 
 
+            // =========================================
+            // تنظيف البيانات إذا فشل شيء
+            // =========================================
+
+            try {
+
+                if (
+                    accountNumberSaved &&
+                    accountNumber
+                ) {
+
+                    await remove(
+                        ref(
+                            db,
+                            "accountNumbers/" +
+                            accountNumber
+                        )
+                    );
+                }
+
+
+                if (
+                    userDataSaved &&
+                    createdUser
+                ) {
+
+                    await remove(
+                        ref(
+                            db,
+                            "users/" +
+                            createdUser.uid
+                        )
+                    );
+                }
+
+
+                if (createdUser) {
+
+                    await deleteUser(
+                        createdUser
+                    );
+                }
+
+            } catch (cleanupError) {
+
+                console.error(
+                    "Cleanup Error:",
+                    cleanupError
+                );
+            }
+
+
+            // =========================================
+            // رسالة الخطأ
+            // =========================================
+
             let errorMessage =
                 "حدث خطأ أثناء إنشاء الحساب.";
 
-
-            // =========================================
-            // أخطاء Firebase Authentication
-            // =========================================
 
             switch (error.code) {
 
@@ -656,7 +763,7 @@ createButton.addEventListener(
                 case "auth/invalid-email":
 
                     errorMessage =
-                        "حدث خطأ في البريد الداخلي للحساب.";
+                        "حدث خطأ في البريد الإلكتروني.";
 
                     break;
 
@@ -677,17 +784,37 @@ createButton.addEventListener(
                     break;
 
 
+                case "auth/requires-recent-login":
+
+                    errorMessage =
+                        "يرجى إعادة المحاولة.";
+
+                    break;
+
+
                 case "PERMISSION_DENIED":
 
                     errorMessage =
-                        "قواعد Firebase تمنع حفظ البيانات.";
+                        "قواعد Firebase تمنع الوصول إلى البيانات.";
 
                     break;
 
 
                 default:
 
-                    if (error.message) {
+                    if (
+                        error.message &&
+                        error.message.includes(
+                            "PERMISSION_DENIED"
+                        )
+                    ) {
+
+                        errorMessage =
+                            "قواعد Firebase تمنع الوصول إلى البيانات.";
+
+                    } else if (
+                        error.message
+                    ) {
 
                         errorMessage =
                             error.message;
@@ -698,15 +825,15 @@ createButton.addEventListener(
 
 
             showMessage(
-                errorMessage,
+                escapeHTML(errorMessage),
                 "error"
             );
         }
 
 
-        // ---------------------------------------------
+        // =============================================
         // إعادة الزر
-        // ---------------------------------------------
+        // =============================================
 
         createButton.disabled = false;
 
@@ -718,15 +845,30 @@ createButton.addEventListener(
 
 
 // =====================================================
-// حماية اسم المستخدم قبل وضعه داخل HTML
+// حماية HTML
 // =====================================================
 
 function escapeHTML(text) {
 
-    return text
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-}
+    return String(text)
+        .replace(
+            /&/g,
+            "&amp;"
+        )
+        .replace(
+            /</g,
+            "&lt;"
+        )
+        .replace(
+            />/g,
+            "&gt;"
+        )
+        .replace(
+            /"/g,
+            "&quot;"
+        )
+        .replace(
+            /'/g,
+            "&#039;"
+        );
+        }
