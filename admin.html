@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#080808">
+<title>PED SAN | لوحة الإدارة</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;padding:20px;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,#050505,#260707,#080808);color:#fff;font-family:Arial,sans-serif}
+.card{width:100%;max-width:980px;padding:25px;background:rgba(18,18,18,.96);border:1px solid #492020;border-radius:22px;box-shadow:0 10px 40px #0009}
+.logo{text-align:center;font-size:30px;font-weight:bold;color:#ff3333;letter-spacing:2px}
+.subtitle{text-align:center;color:#aaa;margin:8px 0 25px}
+label{display:block;margin-top:15px;color:#ddd;font-size:14px}
+input,textarea,select{width:100%;margin-top:8px;padding:14px;color:#fff;background:#191919;border:1px solid #3b3b3b;border-radius:12px;outline:none;font-size:15px;font-family:inherit}
+textarea{min-height:110px;resize:vertical;line-height:1.7}
+button{margin-top:14px;padding:13px 15px;border:0;border-radius:12px;background:linear-gradient(90deg,#a60000,#f22);color:white;font-size:14px;font-weight:bold;cursor:pointer}
+button:disabled{opacity:.5;cursor:not-allowed}
+.full{width:100%}.secondary{background:#292929}.green{background:linear-gradient(90deg,#08752b,#21c45b)}.danger{background:#68141b}
+.hidden{display:none!important}
+.status{margin-top:18px;padding:12px;background:#202020;border-radius:10px;color:#ddd;font-size:13px;line-height:1.8;overflow-wrap:anywhere;white-space:pre-wrap}
+.section{margin-top:22px;padding:16px;background:#111;border:1px solid #3b2424;border-radius:16px}
+.section h3{margin:0 0 8px;color:#ff5555;font-size:18px}
+.desc{font-size:13px;color:#aaa;line-height:1.8}
+.state{font-weight:bold;margin-top:12px}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:16px}
+.stat{padding:14px;background:#191919;border:1px solid #333;border-radius:12px}
+.stat span{display:block;color:#aaa;font-size:12px}.stat b{display:block;font-size:25px;margin-top:6px}
+.row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.tablewrap{overflow:auto;margin-top:12px}
+table{width:100%;min-width:760px;border-collapse:collapse}
+th,td{text-align:right;padding:11px 8px;border-bottom:1px solid #333;font-size:13px;vertical-align:middle}
+th{color:#ff7777}
+.small{padding:7px 9px;margin:2px;font-size:12px}
+.pill{display:inline-block;border-radius:20px;padding:4px 8px;background:#333;font-size:12px}
+.good{background:#12382a;color:#9ef0cc}.bad{background:#43191c;color:#ffc0c3}
+.actions{display:flex;gap:7px;flex-wrap:wrap}
+.hint{margin-top:18px;color:#888;text-align:center;font-size:12px}
+@media(max-width:650px){body{padding:10px}.card{padding:15px}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.row{grid-template-columns:1fr}.logo{font-size:26px}}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">PED SAN</div>
+  <div class="subtitle">لوحة إدارة الرسائل والاشتراكات والأجهزة</div>
+
+  <div id="loginBox">
+    <label for="email">البريد الإلكتروني للمدير</label>
+    <input id="email" type="email" autocomplete="username" placeholder="أدخل البريد الإلكتروني">
+    <label for="password">كلمة مرور المدير</label>
+    <input id="password" type="password" autocomplete="current-password" placeholder="أدخل كلمة المرور">
+    <button id="loginBtn" class="full">تسجيل الدخول</button>
+  </div>
+
+  <div id="adminBox" class="hidden">
+    <div class="grid">
+      <div class="stat"><span>كل الحسابات</span><b id="countAll">0</b></div>
+      <div class="stat"><span>اشتراكات نشطة</span><b id="countActive">0</b></div>
+      <div class="stat"><span>اشتراكات منتهية</span><b id="countExpired">0</b></div>
+      <div class="stat"><span>حسابات موقوفة</span><b id="countStopped">0</b></div>
+    </div>
+
+    <div class="section">
+      <h3>إنشاء يوزر نيم جديد</h3>
+      <div class="desc">اليوزر نيم من 3 إلى 32 حرفاً: أحرف إنجليزية صغيرة أو أرقام أو _ . لا توجد كلمة مرور للمستخدم.</div>
+      <div class="row">
+        <div><label for="newUsername">اليوزر نيم</label><input id="newUsername" maxlength="32" placeholder="مثال: pedro2026" autocomplete="off"></div>
+        <div><label for="newPlan">مدة الاشتراك</label><select id="newPlan"><option value="1">يوم واحد</option><option value="7">أسبوع</option><option value="30" selected>شهر (30 يوماً)</option></select></div>
+      </div>
+      <button id="createBtn">إنشاء الحساب</button>
+    </div>
+
+    <div class="section">
+      <h3>المستخدمون والاشتراكات</h3>
+      <label for="searchUser">بحث باليوزر نيم</label><input id="searchUser" placeholder="ابحث عن حساب">
+      <div class="tablewrap"><table><thead><tr><th>اليوزر نيم</th><th>الحالة</th><th>تاريخ الانتهاء</th><th>الجهاز</th><th>الإجراءات</th></tr></thead><tbody id="usersBody"><tr><td colspan="5">جارٍ تحميل الحسابات...</td></tr></tbody></table></div>
+    </div>
+
+    <div class="section">
+      <h3>إدارة الرسائل</h3>
+      <label for="title">عنوان الرسالة</label><input id="title" maxlength="100" value="يوجد تحديث">
+      <label for="message">محتوى الرسالة</label><textarea id="message" maxlength="5000" placeholder="اكتب الرسالة هنا..."></textarea>
+      <button id="sendBtn">إرسال الرسالة</button>
+      <div class="desc">تحفظ الرسالة في المسار messages ليعرضها التطبيق. تأكد أن التطبيق يستمع لهذا المسار.</div>
+    </div>
+
+    <div class="section">
+      <h3>التحكم في زر تسجيل الدخول</h3>
+      <div class="desc">تشغيل أو إيقاف button1 عبر المسار settings/button1_enabled.</div>
+      <div id="buttonState" class="state">جارٍ جلب حالة الزر...</div>
+      <button id="enableBtn" class="green">تشغيل button1</button>
+      <button id="disableBtn">إيقاف button1</button>
+    </div>
+
+    <button id="logoutBtn" class="secondary full">تسجيل الخروج</button>
+  </div>
+  <div id="status" class="status">سجّل الدخول بحساب المدير للمتابعة.</div>
+  <div class="hint">PED SAN — نظام إدارة التطبيق</div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+(function(){
+"use strict";
+var firebaseConfig={
+  apiKey:"AIzaSyC393Ko1pqXlXQGP3iyoXau9zDm8JLlQUA",
+  authDomain:"ped-37b14.firebaseapp.com",
+  databaseURL:"https://ped-37b14-default-rtdb.firebaseio.com",
+  projectId:"ped-37b14",
+  storageBucket:"ped-37b14.firebasestorage.app",
+  messagingSenderId:"816967461547",
+  appId:"1:816967461547:web:a08a820772b3212f6b65ee",
+  measurementId:"G-60WPS80C8Q"
+};
+/* غيّر UID أدناه إلى UID المدير الحقيقي المؤكد من Firebase Authentication. */
+var ADMIN_UID="PUT_REAL_ADMIN_UID_HERE";
+function el(id){return document.getElementById(id)}
+function say(s){el("status").textContent=s}
+if(!window.firebase){say("تعذر تحميل Firebase. تحقق من الإنترنت.");return}
+try{if(!firebase.apps.length)firebase.initializeApp(firebaseConfig)}catch(e){say("خطأ تهيئة Firebase: "+e.message);return}
+var auth=firebase.auth(),db=firebase.database(),usersCache={},buttonListener=null,busy=false;
+function isAdmin(){return !!auth.currentUser && ADMIN_UID!=="PUT_REAL_ADMIN_UID_HERE" && auth.currentUser.uid===ADMIN_UID}
+function guard(){if(!isAdmin())throw new Error("هذا الحساب ليس المدير المصرح له. تحقق من UID المدير في الملف وقواعد Firebase.")}
+function message(s){say(s)}
+function username(v){return String(v||"").trim().toLowerCase()}
+function validUsername(v){return /^[a-z0-9_]{3,32}$/.test(v)}
+function dateText(v){if(!v)return "—";try{return new Date(Number(v)).toLocaleString("ar",{dateStyle:"medium",timeStyle:"short"})}catch(e){return "—"}}
+function stateOf(u){if(u.disabled)return ["موقوف","bad"];if(Number(u.expiresAt||0)<=Date.now())return ["منتهي","bad"];return ["نشط","good"]}
+function stats(){
+ var all=Object.values(usersCache),active=0,expired=0,stopped=0;
+ all.forEach(function(u){if(u.disabled)stopped++;else if(Number(u.expiresAt||0)>Date.now())active++;else expired++});
+ el("countAll").textContent=all.length;el("countActive").textContent=active;el("countExpired").textContent=expired;el("countStopped").textContent=stopped;
+}
+function renderUsers(){
+ var q=username(el("searchUser").value),body=el("usersBody");body.innerHTML="";
+ var keys=Object.keys(usersCache).filter(function(k){return k.indexOf(q)!==-1}).sort();
+ if(!keys.length){body.innerHTML='<tr><td colspan="5">لا توجد حسابات مطابقة.</td></tr>';stats();return}
+ keys.forEach(function(k){
+  var u=usersCache[k]||{},s=stateOf(u),tr=document.createElement("tr");
+  var name=document.createElement("td");name.textContent=k;
+  var st=document.createElement("td"),pill=document.createElement("span");pill.className="pill "+s[1];pill.textContent=s[0];st.appendChild(pill);
+  var exp=document.createElement("td");exp.textContent=dateText(u.expiresAt);
+  var dev=document.createElement("td");dev.textContent=u.deviceIdHash?"مرتبط":"غير مربوط";
+  var actions=document.createElement("td");
+  function btn(text,cls,fn){var b=document.createElement("button");b.className="small "+(cls||"");b.textContent=text;b.onclick=fn;actions.appendChild(b)}
+  btn("تجديد","",function(){renew(k)});
+  btn(u.disabled?"تفعيل":"إيقاف","secondary",function(){toggle(k,!u.disabled)});
+  btn("فك ربط الجهاز","secondary",function(){resetDevice(k)});
+  btn("حذف","danger",function(){removeUser(k)});
+  tr.append(name,st,exp,dev,actions);body.appendChild(tr);
+ });stats();
+}
+async function loadUsers(){guard();var snap=await db.ref("users").once("value");usersCache=snap.val()||{};renderUsers()}
+async function createUser(){
+ try{guard();var k=username(el("newUsername").value),days=Number(el("newPlan").value);if(!validUsername(k))throw new Error("اليوزر نيم يجب أن يكون 3–32 حرفاً من a-z أو الأرقام أو _.");
+ var ref=db.ref("users/"+k),snap=await ref.once("value");if(snap.exists())throw new Error("اليوزر نيم موجود بالفعل.");
+ var now=Date.now();await ref.set({username:k,createdAt:firebase.database.ServerValue.TIMESTAMP,expiresAt:now+days*86400000,disabled:false,deviceIdHash:null,deviceBoundAt:null,updatedAt:firebase.database.ServerValue.TIMESTAMP});
+ el("newUsername").value="";await loadUsers();say("تم إنشاء الحساب "+k+" باشتراك "+days+" يوم.");}
+ catch(e){say("تعذر إنشاء الحساب: "+e.message)}
+}
+async function renew(k){
+ try{guard();var d=prompt("مدة التجديد بالأيام (مثلاً 1 أو 7 أو 30):");if(d===null)return;var days=Number(d);if(!Number.isInteger(days)||days<1||days>3650)throw new Error("أدخل عدداً صحيحاً بين 1 و3650.");
+ var ref=db.ref("users/"+k),s=await ref.once("value");if(!s.exists())throw new Error("الحساب غير موجود.");var u=s.val(),base=Math.max(Date.now(),Number(u.expiresAt)||0);
+ await ref.update({expiresAt:base+days*86400000,disabled:false,updatedAt:firebase.database.ServerValue.TIMESTAMP});await loadUsers();say("تم تجديد "+k+" لمدة "+days+" يوم.");}
+ catch(e){say("تعذر التجديد: "+e.message)}
+}
+async function toggle(k,disabled){try{guard();await db.ref("users/"+k).update({disabled:disabled,updatedAt:firebase.database.ServerValue.TIMESTAMP});await loadUsers();say(disabled?"تم إيقاف "+k:"تم تفعيل "+k)}catch(e){say("تعذر تحديث الحساب: "+e.message)}}
+async function resetDevice(k){
+ try{guard();if(!confirm("فك ربط الجهاز من "+k+"؟"))return;await db.ref("users/"+k).update({deviceIdHash:null,deviceBoundAt:null,deviceResetAt:firebase.database.ServerValue.TIMESTAMP,updatedAt:firebase.database.ServerValue.TIMESTAMP});await loadUsers();say("تم مسح ربط الجهاز. إعادة الربط الآمنة تحتاج تحققاً من جهة موثوقة في التطبيق والخادم.");}
+ catch(e){say("تعذر فك الربط: "+e.message)}
+}
+async function removeUser(k){try{guard();if(!confirm("حذف حساب "+k+" نهائياً؟"))return;await db.ref("users/"+k).remove();await loadUsers();say("تم حذف "+k)}catch(e){say("تعذر الحذف: "+e.message)}}
+async function sendMessage(){
+ try{guard();var title=el("title").value.trim(),body=el("message").value.trim();if(!title||!body)throw new Error("اكتب عنوان الرسالة ومحتواها.");
+ await db.ref("messages").push({title:title,message:body,createdAt:firebase.database.ServerValue.TIMESTAMP,createdBy:auth.currentUser.uid});el("message").value="";say("تم إرسال الرسالة وحفظها في Firebase.");}
+ catch(e){say("تعذر إرسال الرسالة: "+e.message)}
+}
+function stopButton(){if(buttonListener){db.ref("settings/button1_enabled").off("value",buttonListener);buttonListener=null}}
+function listenButton(){
+ stopButton();var ref=db.ref("settings/button1_enabled");
+ buttonListener=function(s){var v=s.val();el("buttonState").textContent=typeof v!=="boolean"?"لم تُضبط الحالة بعد":(v?"حالة الزر: يعمل الآن":"حالة الزر: متوقف");};
+ ref.on("value",buttonListener,function(e){el("buttonState").textContent="تعذر قراءة الحالة: "+e.message});
+}
+async function setButton(v){
+ try{guard();await db.ref("settings/button1_enabled").set(v);say(v?"تم تشغيل button1.":"تم إيقاف button1.");}
+ catch(e){say("تعذر تغيير حالة button1: "+e.message)}
+}
+el("loginBtn").onclick=async function(){
+ var email=el("email").value.trim(),pass=el("password").value;if(!email||!pass){say("أدخل البريد الإلكتروني وكلمة المرور.");return}
+ el("loginBtn").disabled=true;say("جارٍ تسجيل الدخول...");
+ try{await auth.signInWithEmailAndPassword(email,pass)}catch(e){say("فشل تسجيل الدخول: "+e.message)}finally{el("loginBtn").disabled=false}
+};
+el("createBtn").onclick=createUser;el("searchUser").addEventListener("input",renderUsers);
+el("sendBtn").onclick=sendMessage;el("enableBtn").onclick=function(){setButton(true)};el("disableBtn").onclick=function(){setButton(false)};
+el("logoutBtn").onclick=function(){auth.signOut().then(function(){say("تم تسجيل الخروج")}).catch(function(e){say(e.message)})};
+auth.onAuthStateChanged(async function(user){
+ if(user&&isAdmin()){
+  el("loginBox").classList.add("hidden");el("adminBox").classList.remove("hidden");listenButton();say("تم دخول المدير. جارٍ تحميل الحسابات...");
+  try{await loadUsers();say("تم تحميل الحسابات.")}catch(e){say("تعذر تحميل الحسابات: "+e.message)}
+ }else{
+  if(user)await auth.signOut();el("loginBox").classList.remove("hidden");el("adminBox").classList.add("hidden");stopButton();usersCache={};
+  if(ADMIN_UID==="PUT_REAL_ADMIN_UID_HERE")say("قبل الاستخدام: ضع UID المدير الحقيقي في ADMIN_UID، ثم اضبط قواعد Firebase لحماية الكتابة والقراءة.");
+  else say("سجّل الدخول بحساب المدير المصرح به.");
+ }
+});
+})();
+</script>
+</body>
+</html>
